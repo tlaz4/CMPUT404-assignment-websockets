@@ -42,7 +42,38 @@ function debug(str) {
 }
 debug("Test");
 
+// make an ajax request to get initial state of world
+function sendJSONXMLHTTPRequest(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState==4) {
+            try {
+                if (xhr.status==200) {
+                    //XXX: parse some JSON from the request!
+                    //XXX: Pass the data to the callback!
+                    callback(xhr.response);
+                }
+            } 
+            catch(e) {
+                alert('Error: ' + e.name);
+            }
+        }
+    };
+    // Remember to use application/json !
+    xhr.open("GET", url);
+    xhr.setRequestHeader("Accept", "application/json");
+    xhr.send();
+}
+
+
 world = {};
+
+
+function genRandomColour(){
+    return "rgb(" + (Math.random() * 256) + ", " + 
+    (Math.random() * 256) + ", " + (Math.random() * 256) + ")";
+}
+
 
 //XXX: TODO Make this prettier!
 function drawCircle(context,entity) {
@@ -55,7 +86,7 @@ function drawCircle(context,entity) {
         fillStyle = entity["colour"];
         strokeStyle = fillStyle;
         arc(x, y, (entity["radius"])?entity["radius"]:50, 0, 2.0 * Math.PI, false);  
-        stroke();                                
+        fill();                                
     }
 }
 
@@ -232,15 +263,13 @@ mouse = (function() {
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    addEntityWithoutName({'x':x,'y':y,'colour':genRandomColour()});
 });
-
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    addEntityWithoutName({'x':x,'y':y,'colour':genRandomColour()});
 });
-
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
+    addEntityWithoutName({'x':x,'y':y,'colour':genRandomColour(),
                           'radius':10});
 });
 
@@ -249,13 +278,20 @@ function update() {
     drawFrame();
 }
 
+function createWorld(data){
+    world = JSON.parse(data);
+    console.log(world);
+    update();
+}
+
 
 function wsSetup() {
     var url = "ws://"+host+"/subscribe";   
     socket = new WebSocket(url);
     socket.onopen = function() {
-        //XXX: TODO What are you going to do here?
+        // lets make an ajax request to get the initial state of the world
         console.log("opened socket!");
+        sendJSONXMLHTTPRequest("http://127.0.0.1:8000/world", createWorld);
     };
     socket.onerror = function(msg) {
         debug("WebSocket Error:" + msg.data);
@@ -274,8 +310,6 @@ function wsSetup() {
 }
 
 wsSetup();
-
-
 
 
 // 30 frames per second
